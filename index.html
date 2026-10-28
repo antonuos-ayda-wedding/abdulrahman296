@@ -1,4 +1,4 @@
-<!doctype html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
 <title>Antonous & Ayda</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -435,7 +435,8 @@ const CONFIG = {
   place: 'Sheraton, Cairo',
   address: '8 Khaled Ibn Al Walid, Sheraton Al Matar, El Nozha, Cairo',
   mapQuery: 'Church of Archangel Michael in Sheraton, 8 Khaled Ibn Al Walid, Sheraton Al Matar, El Nozha, Cairo',
-  mapUrl: ''                               // optional: paste the exact Google Maps share link here
+  mapUrl: '',                              // optional: paste the exact Google Maps share link here
+  scrollSpeed: 30                          // auto-scroll speed in pixels per second (higher = faster, 0 = off)
 };
 
 (function(){
@@ -536,6 +537,7 @@ const CONFIG = {
     gate.classList.add('hide');
     root.style.overflow='';
     setTimeout(function(){ gate.hidden=true; },800);
+    if (window.startAutoScroll) setTimeout(window.startAutoScroll,1500);
   }
 
   openBtn.addEventListener('click',function(){
@@ -559,6 +561,54 @@ const CONFIG = {
   setUI();
   /* If the browser happens to allow sound right away, skip the opening screen */
   play().then(function(){ started=true; closeGate(); }).catch(function(){});
+})();
+/* Slow automatic scroll: starts after the invitation opens, pauses while the visitor
+   touches or scrolls, and carries on after a few quiet seconds */
+(function(){
+  var speed=CONFIG.scrollSpeed||0;
+  var reduce=window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if (!speed || reduce) return;
+  var running=false, paused=false, pos=0, last=0, resumeTimer=null, raf=0;
+  var IDLE=4000;
+
+  function atBottom(){
+    return window.scrollY+window.innerHeight>=document.documentElement.scrollHeight-2;
+  }
+  function frame(t){
+    if (!running) return;
+    if (!last) last=t;
+    var dt=Math.min(t-last,100)/1000;
+    last=t;
+    if (!paused){
+      pos+=speed*dt;
+      window.scrollTo(0,pos);
+      if (atBottom()){ running=false; return; }
+    }
+    raf=requestAnimationFrame(frame);
+  }
+  function pause(e){
+    if (!running) return;
+    if (e && e.target && e.target.closest && e.target.closest('#music')) return;
+    paused=true;
+    clearTimeout(resumeTimer);
+    resumeTimer=setTimeout(function(){
+      pos=window.scrollY;
+      last=0;
+      paused=false;
+    },IDLE);
+  }
+  ['wheel','touchstart','touchmove','pointerdown','keydown'].forEach(function(ev){
+    window.addEventListener(ev,pause,{passive:true});
+  });
+
+  window.startAutoScroll=function(){
+    if (running) return;
+    pos=window.scrollY;
+    last=0;
+    paused=false;
+    running=true;
+    raf=requestAnimationFrame(frame);
+  };
 })();
 </script>
 
